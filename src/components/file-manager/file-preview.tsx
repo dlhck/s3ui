@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useObjectContent, usePresignedUrl } from "@/hooks/use-s3";
-import type { S3Object } from "@/lib/s3/types";
 import { format } from "date-fns";
 import { filesize } from "filesize";
+import { Download, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Download, Loader2, X } from "lucide-react";
+import { useObjectContent, usePresignedUrl } from "@/hooks/use-s3";
+import type { S3Object } from "@/lib/s3/types";
 
 interface FilePreviewProps {
   bucket: string;
@@ -22,7 +23,16 @@ interface FilePreviewProps {
   onDownload: (object: S3Object) => void;
 }
 
-const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "svg", "ico", "bmp"];
+const IMAGE_EXTENSIONS = [
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "webp",
+  "svg",
+  "ico",
+  "bmp",
+];
 const TEXT_EXTENSIONS = [
   "txt",
   "md",
@@ -56,9 +66,7 @@ const TEXT_EXTENSIONS = [
 ];
 const PDF_EXTENSIONS = ["pdf"];
 
-function getFileType(
-  name: string
-): "image" | "text" | "pdf" | "unknown" {
+function getFileType(name: string): "image" | "text" | "pdf" | "unknown" {
   const ext = name.split(".").pop()?.toLowerCase() || "";
 
   if (IMAGE_EXTENSIONS.includes(ext)) return "image";
@@ -84,7 +92,7 @@ export function FilePreview({
   const { data: textContent, isLoading: isLoadingText } = useObjectContent(
     bucket,
     object?.key || "",
-    isOpen && showTextContent && !!object
+    isOpen && showTextContent && !!object,
   );
 
   useEffect(() => {
@@ -115,23 +123,9 @@ export function FilePreview({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden">
-        <DialogHeader className="flex-row items-center justify-between space-y-0">
-          <DialogTitle className="truncate pr-4">{object.name}</DialogTitle>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onDownload(object)}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Download
-            </Button>
-          </div>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-4">
-          {/* Metadata */}
+      <DialogContent className="flex h-[95vh] w-[95vw] max-w-[95vw] sm:max-w-[95vw] flex-col overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="truncate pr-8">{object.name}</DialogTitle>
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             {object.size !== undefined && (
               <span>Size: {filesize(object.size)}</span>
@@ -144,67 +138,67 @@ export function FilePreview({
             )}
             {object.contentType && <span>Type: {object.contentType}</span>}
           </div>
+        </DialogHeader>
 
-          {/* Preview Content */}
-          <div className="max-h-[60vh] overflow-auto rounded-lg border bg-muted/30">
-            {fileType === "image" && (
-              <div className="flex items-center justify-center p-4">
-                {previewUrl ? (
-                  <img
-                    src={previewUrl}
-                    alt={object.name}
-                    className="max-h-[50vh] max-w-full object-contain"
-                  />
-                ) : (
+        {/* Preview Content */}
+        <div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-muted/30">
+          {fileType === "image" && (
+            <div className="flex h-full items-center justify-center p-4">
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt={object.name}
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : (
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              )}
+            </div>
+          )}
+
+          {fileType === "text" && (
+            <div className="p-4">
+              {isLoadingText ? (
+                <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                )}
-              </div>
-            )}
+                </div>
+              ) : (
+                <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-sm">
+                  {textContent?.content || ""}
+                </pre>
+              )}
+            </div>
+          )}
 
-            {fileType === "text" && (
-              <div className="p-4">
-                {isLoadingText ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-sm">
-                    {textContent?.content || ""}
-                  </pre>
-                )}
-              </div>
-            )}
+          {fileType === "pdf" && (
+            <div className="h-full">
+              {previewUrl ? (
+                <iframe
+                  src={previewUrl}
+                  className="h-full w-full"
+                  title={object.name}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </div>
+          )}
 
-            {fileType === "pdf" && (
-              <div className="h-[50vh]">
-                {previewUrl ? (
-                  <iframe
-                    src={previewUrl}
-                    className="h-full w-full"
-                    title={object.name}
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {fileType === "unknown" && (
-              <div className="flex flex-col items-center justify-center gap-4 py-12 text-muted-foreground">
-                <p>Preview not available for this file type</p>
-                <Button
-                  variant="outline"
-                  onClick={() => onDownload(object)}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download to view
-                </Button>
-              </div>
-            )}
-          </div>
+          {fileType === "unknown" && (
+            <div className="flex h-full flex-col items-center justify-center gap-4 text-muted-foreground">
+              <p>Preview not available for this file type</p>
+            </div>
+          )}
         </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onDownload(object)}>
+            <Download className="mr-2 h-4 w-4" />
+            Download
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
