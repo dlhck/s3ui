@@ -1,7 +1,7 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useCreateFolder } from "@/hooks/use-s3";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { useCreateFolder } from "@/hooks/use-s3";
 
 interface CreateFolderDialogProps {
   bucket: string;

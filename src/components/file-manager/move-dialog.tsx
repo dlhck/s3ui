@@ -1,8 +1,7 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useBuckets, useMoveObject, useCopyObject } from "@/hooks/use-s3";
-import type { S3Object } from "@/lib/s3/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { useBuckets, useCopyObject, useMoveObject } from "@/hooks/use-s3";
+import type { S3Object } from "@/lib/s3/types";
 
 interface MoveDialogProps {
   bucket: string;
@@ -82,7 +82,8 @@ export function MoveDialog({
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
-              {mode === "move" ? "Move" : "Copy"} {object?.isFolder ? "Folder" : "File"}
+              {mode === "move" ? "Move" : "Copy"}{" "}
+              {object?.isFolder ? "Folder" : "File"}
             </DialogTitle>
             <DialogDescription>
               Select the destination for {object?.name}.

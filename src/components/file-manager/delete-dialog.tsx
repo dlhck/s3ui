@@ -1,8 +1,6 @@
 "use client";
 
-import { useDeleteObjects } from "@/hooks/use-s3";
-import type { S3Object } from "@/lib/s3/types";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +11,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useDeleteObjects } from "@/hooks/use-s3";
+import type { S3Object } from "@/lib/s3/types";
 
 interface DeleteDialogProps {
   bucket: string;
@@ -57,7 +57,9 @@ export function DeleteDialog({
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {itemCount > 1 ? "Items" : "Item"}</AlertDialogTitle>
+          <AlertDialogTitle>
+            Delete {itemCount > 1 ? "Items" : "Item"}
+          </AlertDialogTitle>
           <AlertDialogDescription>
             Are you sure you want to delete {description}? This action cannot be
             undone.

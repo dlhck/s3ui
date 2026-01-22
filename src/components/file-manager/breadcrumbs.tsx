@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 interface BreadcrumbsProps {
@@ -34,7 +34,7 @@ export function Breadcrumbs({ bucket, path }: BreadcrumbsProps) {
             href={segment.href}
             className={cn(
               "rounded px-1.5 py-0.5 hover:bg-accent",
-              index === segments.length - 1 && "font-medium"
+              index === segments.length - 1 && "font-medium",
             )}
           >
             {segment.name}

@@ -1,27 +1,25 @@
 "use client";
 
-import Link from "next/link";
 import { format } from "date-fns";
 import { filesize } from "filesize";
-import type { S3Object } from "@/lib/s3/types";
-import { cn } from "@/lib/utils";
 import {
+  Copy,
+  Download,
+  Eye,
   File,
+  FileArchive,
+  FileAudio,
+  FileCode,
   FileImage,
   FileText,
   FileVideo,
-  FileAudio,
-  FileArchive,
-  FileCode,
   Folder,
   MoreVertical,
-  Download,
-  Trash2,
-  Pencil,
   Move,
-  Copy,
-  Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +27,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { S3Object } from "@/lib/s3/types";
+import { cn } from "@/lib/utils";
 
 interface FileItemProps {
   object: S3Object;
@@ -125,7 +125,7 @@ export function FileItem({
         isSelected
           ? "border-primary bg-primary/5"
           : "border-transparent hover:bg-accent/50",
-        object.isFolder && "cursor-pointer"
+        object.isFolder && "cursor-pointer",
       )}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
@@ -133,7 +133,7 @@ export function FileItem({
       <Icon
         className={cn(
           "h-8 w-8 shrink-0",
-          object.isFolder ? "text-blue-500" : "text-muted-foreground"
+          object.isFolder ? "text-blue-500" : "text-muted-foreground",
         )}
       />
 
