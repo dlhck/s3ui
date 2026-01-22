@@ -45,6 +45,9 @@ This is a Next.js 16 web-based S3 file manager with Better Auth authentication.
 **UI Components** (`src/components/`)
 - `file-manager/` - File browser, toolbar, dialogs (create folder, rename, delete, move, preview)
 - `ui/` - shadcn/ui components (Base UI primitives)
+  - **NEVER edit files in `src/components/ui/` directly**
+  - To add new components: `bunx shadcn@latest add <component>`
+  - To update components: `bunx shadcn@latest add <component> --overwrite`
 - `auth/` - Login form, user button
 
 ### Route Structure
