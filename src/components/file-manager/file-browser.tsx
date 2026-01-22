@@ -1,19 +1,24 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import type { RowSelectionState } from "@tanstack/react-table";
+import { FolderOpen, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useFileUpload } from "@/hooks/use-file-upload";
 import { useObjects, usePresignedUrl } from "@/hooks/use-s3";
 import type { S3Object } from "@/lib/s3/types";
-import { cn } from "@/lib/utils";
 import { Breadcrumbs } from "./breadcrumbs";
-import { FileItem } from "./file-item";
-import { Toolbar } from "./toolbar";
-import { UploadZone } from "./upload-zone";
+import { type ColumnActions, createColumns } from "./columns";
 import { CreateFolderDialog } from "./create-folder-dialog";
-import { RenameDialog } from "./rename-dialog";
+import { DataTable } from "./data-table";
 import { DeleteDialog } from "./delete-dialog";
-import { MoveDialog } from "./move-dialog";
+import { DropzoneWrapper } from "./dropzone-wrapper";
+import { FileItem } from "./file-item";
 import { FilePreview } from "./file-preview";
-import { Loader2, FolderOpen } from "lucide-react";
+import { MoveDialog } from "./move-dialog";
+import { RenameDialog } from "./rename-dialog";
+import { Toolbar } from "./toolbar";
+import { UploadProgressPanel } from "./upload-progress-panel";
 
 interface FileBrowserProps {
   bucket: string;
@@ -21,16 +26,25 @@ interface FileBrowserProps {
 }
 
 export function FileBrowser({ bucket, path }: FileBrowserProps) {
+  const router = useRouter();
   const currentPath = path.join("/");
   const { data, isLoading, error, refetch, isRefetching } = useObjects(
     bucket,
-    currentPath
+    currentPath,
   );
   const presignedUrl = usePresignedUrl();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    uploads,
+    uploadFiles,
+    clearCompleted,
+    clearAll,
+    hasUploads,
+    hasCompleted,
+  } = useFileUpload({ bucket, currentPath });
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [renameObject, setRenameObject] = useState<S3Object | null>(null);
   const [deleteObjects, setDeleteObjects] = useState<S3Object[]>([]);
@@ -38,24 +52,39 @@ export function FileBrowser({ bucket, path }: FileBrowserProps) {
   const [moveMode, setMoveMode] = useState<"move" | "copy">("move");
   const [previewObject, setPreviewObject] = useState<S3Object | null>(null);
 
+  const selectedKeys = useMemo(() => {
+    return new Set(
+      Object.keys(rowSelection).filter((key) => rowSelection[key]),
+    );
+  }, [rowSelection]);
+
   const handleSelect = useCallback((key: string, shiftKey: boolean) => {
-    setSelectedKeys((prev) => {
-      const next = new Set(prev);
-      if (shiftKey && next.has(key)) {
-        next.delete(key);
+    setRowSelection((prev) => {
+      const isSelected = prev[key];
+      if (shiftKey && isSelected) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
       } else if (shiftKey) {
-        next.add(key);
+        return { ...prev, [key]: true };
       } else {
-        if (next.has(key) && next.size === 1) {
-          next.clear();
+        if (isSelected && Object.keys(prev).length === 1) {
+          return {};
         } else {
-          next.clear();
-          next.add(key);
+          return { [key]: true };
         }
       }
-      return next;
     });
   }, []);
+
+  const handleNavigate = useCallback(
+    (object: S3Object) => {
+      if (object.isFolder) {
+        router.push(`/${bucket}/${object.key.replace(/\/$/, "")}`);
+      }
+    },
+    [bucket, router],
+  );
 
   const handleDownload = useCallback(
     async (object: S3Object) => {
@@ -70,13 +99,13 @@ export function FileBrowser({ bucket, path }: FileBrowserProps) {
         console.error("Failed to download:", error);
       }
     },
-    [bucket, presignedUrl]
+    [bucket, presignedUrl],
   );
 
   const handleDeleteSelected = useCallback(() => {
     if (!data) return;
     const objectsToDelete = data.objects.filter((obj) =>
-      selectedKeys.has(obj.key)
+      selectedKeys.has(obj.key),
     );
     if (objectsToDelete.length > 0) {
       setDeleteObjects(objectsToDelete);
@@ -85,7 +114,7 @@ export function FileBrowser({ bucket, path }: FileBrowserProps) {
 
   const handleDeleteClose = useCallback(() => {
     setDeleteObjects([]);
-    setSelectedKeys(new Set());
+    setRowSelection({});
   }, []);
 
   const handleMoveClose = useCallback(() => {
@@ -102,9 +131,46 @@ export function FileBrowser({ bucket, path }: FileBrowserProps) {
     setMoveObject(object);
   }, []);
 
-  const selectedObjects = data?.objects.filter((obj) =>
-    selectedKeys.has(obj.key)
-  ) || [];
+  const handleRowDoubleClick = useCallback(
+    (object: S3Object) => {
+      if (object.isFolder) {
+        handleNavigate(object);
+      } else {
+        setPreviewObject(object);
+      }
+    },
+    [handleNavigate],
+  );
+
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      if (files.length > 0) {
+        uploadFiles(files);
+      }
+      e.target.value = "";
+    },
+    [uploadFiles],
+  );
+
+  const handleUploadClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const columnActions: ColumnActions = useMemo(
+    () => ({
+      onPreview: setPreviewObject,
+      onDownload: handleDownload,
+      onDelete: (obj) => setDeleteObjects([obj]),
+      onRename: setRenameObject,
+      onMove: handleMove,
+      onCopy: handleCopy,
+      onNavigate: handleNavigate,
+    }),
+    [handleDownload, handleMove, handleCopy, handleNavigate],
+  );
+
+  const columns = useMemo(() => createColumns(columnActions), [columnActions]);
 
   return (
     <div className="flex h-full flex-col">
@@ -116,7 +182,7 @@ export function FileBrowser({ bucket, path }: FileBrowserProps) {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           onCreateFolder={() => setIsCreateFolderOpen(true)}
-          onUpload={() => setIsUploadOpen(true)}
+          onUpload={handleUploadClick}
           onDeleteSelected={handleDeleteSelected}
           onRefresh={() => refetch()}
           isRefreshing={isRefetching}
@@ -124,7 +190,10 @@ export function FileBrowser({ bucket, path }: FileBrowserProps) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <DropzoneWrapper
+        className="flex-1 overflow-y-auto p-4"
+        onFilesDropped={uploadFiles}
+      >
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -137,21 +206,25 @@ export function FileBrowser({ bucket, path }: FileBrowserProps) {
           </div>
         )}
 
-        {data && data.objects.length === 0 && (
+        {data && data.objects.length === 0 && viewMode === "grid" && (
           <div className="flex flex-col items-center justify-center gap-4 py-12 text-muted-foreground">
             <FolderOpen className="h-12 w-12" />
             <p>This folder is empty</p>
           </div>
         )}
 
-        {data && data.objects.length > 0 && (
-          <div
-            className={cn(
-              viewMode === "grid"
-                ? "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
-                : "flex flex-col gap-1"
-            )}
-          >
+        {data && viewMode === "list" && (
+          <DataTable
+            columns={columns}
+            data={data.objects}
+            rowSelection={rowSelection}
+            onRowSelectionChange={setRowSelection}
+            onRowDoubleClick={handleRowDoubleClick}
+          />
+        )}
+
+        {data && data.objects.length > 0 && viewMode === "grid" && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {data.objects.map((object) => (
               <FileItem
                 key={object.key}
@@ -170,16 +243,18 @@ export function FileBrowser({ bucket, path }: FileBrowserProps) {
             ))}
           </div>
         )}
-      </div>
+      </DropzoneWrapper>
 
-      {/* Dialogs */}
-      <UploadZone
-        bucket={bucket}
-        currentPath={currentPath}
-        isOpen={isUploadOpen}
-        onClose={() => setIsUploadOpen(false)}
+      {/* Hidden file input for toolbar upload button */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFileInputChange}
       />
 
+      {/* Dialogs */}
       <CreateFolderDialog
         bucket={bucket}
         currentPath={currentPath}
@@ -216,6 +291,16 @@ export function FileBrowser({ bucket, path }: FileBrowserProps) {
         onClose={() => setPreviewObject(null)}
         onDownload={handleDownload}
       />
+
+      {/* Upload progress panel */}
+      {hasUploads && (
+        <UploadProgressPanel
+          uploads={uploads}
+          onClearCompleted={clearCompleted}
+          onClearAll={clearAll}
+          hasCompleted={hasCompleted}
+        />
+      )}
     </div>
   );
 }
