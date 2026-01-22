@@ -1,20 +1,22 @@
+import type { Readable } from "node:stream";
 import {
-  ListBucketsCommand,
-  ListObjectsV2Command,
+  CopyObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
-  CopyObjectCommand,
-  PutObjectCommand,
-  HeadObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
+  ListBucketsCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
 } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { getS3Client, getAllowedBuckets } from "./client";
+import { getAllowedBuckets, getS3Client } from "./client";
 import type {
-  S3Bucket,
-  S3Object,
   ListObjectsResult,
   PresignedUrlResult,
+  S3Bucket,
+  S3Object,
 } from "./types";
 
 const PRESIGNED_URL_EXPIRY = 3600; // 1 hour
@@ -40,12 +42,13 @@ export async function listBuckets(): Promise<S3Bucket[]> {
 export async function listObjects(
   bucket: string,
   prefix: string = "",
-  continuationToken?: string
+  continuationToken?: string,
 ): Promise<ListObjectsResult> {
   const client = getS3Client();
 
   // Ensure prefix ends with / if it's not empty (to list folder contents)
-  const normalizedPrefix = prefix && !prefix.endsWith("/") ? `${prefix}/` : prefix;
+  const normalizedPrefix =
+    prefix && !prefix.endsWith("/") ? `${prefix}/` : prefix;
 
   const command = new ListObjectsV2Command({
     Bucket: bucket,
@@ -93,7 +96,7 @@ export async function listObjects(
 
 export async function getObjectMetadata(
   bucket: string,
-  key: string
+  key: string,
 ): Promise<S3Object> {
   const client = getS3Client();
   const command = new HeadObjectCommand({
@@ -126,7 +129,7 @@ export async function deleteObject(bucket: string, key: string): Promise<void> {
 
 export async function deleteObjects(
   bucket: string,
-  keys: string[]
+  keys: string[],
 ): Promise<void> {
   const client = getS3Client();
   const command = new DeleteObjectsCommand({
@@ -143,7 +146,7 @@ export async function copyObject(
   sourceBucket: string,
   sourceKey: string,
   destinationBucket: string,
-  destinationKey: string
+  destinationKey: string,
 ): Promise<void> {
   const client = getS3Client();
   const command = new CopyObjectCommand({
@@ -158,7 +161,7 @@ export async function moveObject(
   sourceBucket: string,
   sourceKey: string,
   destinationBucket: string,
-  destinationKey: string
+  destinationKey: string,
 ): Promise<void> {
   await copyObject(sourceBucket, sourceKey, destinationBucket, destinationKey);
   await deleteObject(sourceBucket, sourceKey);
@@ -166,7 +169,7 @@ export async function moveObject(
 
 export async function createFolder(
   bucket: string,
-  folderPath: string
+  folderPath: string,
 ): Promise<void> {
   const client = getS3Client();
   const key = folderPath.endsWith("/") ? folderPath : `${folderPath}/`;
@@ -182,7 +185,7 @@ export async function createFolder(
 export async function renameObject(
   bucket: string,
   oldKey: string,
-  newKey: string
+  newKey: string,
 ): Promise<void> {
   await moveObject(bucket, oldKey, bucket, newKey);
 }
@@ -190,7 +193,7 @@ export async function renameObject(
 export async function getUploadPresignedUrl(
   bucket: string,
   key: string,
-  contentType?: string
+  contentType?: string,
 ): Promise<PresignedUrlResult> {
   const client = getS3Client();
   const command = new PutObjectCommand({
@@ -211,7 +214,7 @@ export async function getUploadPresignedUrl(
 
 export async function getDownloadPresignedUrl(
   bucket: string,
-  key: string
+  key: string,
 ): Promise<PresignedUrlResult> {
   const client = getS3Client();
   const command = new GetObjectCommand({
@@ -231,7 +234,7 @@ export async function getDownloadPresignedUrl(
 
 export async function getObjectContent(
   bucket: string,
-  key: string
+  key: string,
 ): Promise<{ content: string; contentType?: string }> {
   const client = getS3Client();
   const command = new GetObjectCommand({
@@ -246,4 +249,40 @@ export async function getObjectContent(
     content: content || "",
     contentType: response.ContentType,
   };
+}
+
+export interface UploadProgress {
+  loaded: number;
+  total?: number;
+}
+
+export async function uploadObject(
+  bucket: string,
+  key: string,
+  body: Buffer | Readable,
+  contentType?: string,
+  onProgress?: (progress: UploadProgress) => void,
+): Promise<void> {
+  const client = getS3Client();
+
+  const upload = new Upload({
+    client,
+    params: {
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    },
+  });
+
+  if (onProgress) {
+    upload.on("httpUploadProgress", (progress) => {
+      onProgress({
+        loaded: progress.loaded ?? 0,
+        total: progress.total,
+      });
+    });
+  }
+
+  await upload.done();
 }
