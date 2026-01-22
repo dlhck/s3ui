@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 bun install          # Install dependencies
-bun dev              # Start dev server (auto-starts Docker PostgreSQL)
-bun build            # Production build
-bun lint             # Run Biome linter
-bun format           # Format code with Biome
-bun db:migrate       # Run Better Auth database migrations
-bun db:seed          # Seed the database
+bun run dev          # Start dev server (auto-starts Docker PostgreSQL)
+bun run build        # Production build
+bun run lint         # Run Biome linter
+bun run format       # Format code with Biome
+bun run db:migrate   # Run Better Auth database migrations
+bun run db:seed      # Seed the database
 ```
 
 ## Architecture
