@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-server";
 import {
-  getUploadPresignedUrl,
   getDownloadPresignedUrl,
+  getUploadPresignedUrl,
 } from "@/lib/s3/operations";
 
 export async function POST(request: NextRequest) {
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     if (!bucket || !key) {
       return NextResponse.json(
         { error: "Bucket and key are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       default:
         return NextResponse.json(
           { error: "Invalid action. Use 'upload' or 'download'" },
-          { status: 400 }
+          { status: 400 },
         );
     }
   } catch (error) {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     console.error("Error generating presigned URL:", error);
     return NextResponse.json(
       { error: "Failed to generate presigned URL" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

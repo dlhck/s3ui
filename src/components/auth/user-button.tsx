@@ -1,6 +1,7 @@
 "use client";
 
-import { useSession, signOut } from "@/lib/auth-client";
+import { LogOut, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,17 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { signOut, useSession } from "@/lib/auth-client";
 
 export function UserButton() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
 
   if (isPending) {
-    return (
-      <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
-    );
+    return <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />;
   }
 
   if (!session?.user) {

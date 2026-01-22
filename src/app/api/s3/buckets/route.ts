@@ -14,7 +14,7 @@ export async function GET() {
     console.error("Error listing buckets:", error);
     return NextResponse.json(
       { error: "Failed to list buckets" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

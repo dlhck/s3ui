@@ -1,12 +1,14 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { S3Bucket, S3Object, ListObjectsResult } from "@/lib/s3/types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ListObjectsResult, S3Bucket, S3Object } from "@/lib/s3/types";
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    const error = await response
+      .json()
+      .catch(() => ({ error: "Unknown error" }));
     throw new Error(error.error || "Request failed");
   }
   return response.json();
@@ -17,7 +19,7 @@ export function useBuckets() {
     queryKey: ["buckets"],
     queryFn: () =>
       fetchJson<{ buckets: S3Bucket[] }>("/api/s3/buckets").then(
-        (data) => data.buckets
+        (data) => data.buckets,
       ),
   });
 }
@@ -38,17 +40,23 @@ export function useObjectMetadata(bucket: string, key: string) {
   return useQuery({
     queryKey: ["object", bucket, key],
     queryFn: () =>
-      fetchJson<S3Object>(`/api/s3/objects/${bucket}/${encodeURIComponent(key)}`),
+      fetchJson<S3Object>(
+        `/api/s3/objects/${bucket}/${encodeURIComponent(key)}`,
+      ),
     enabled: !!bucket && !!key,
   });
 }
 
-export function useObjectContent(bucket: string, key: string, enabled: boolean = true) {
+export function useObjectContent(
+  bucket: string,
+  key: string,
+  enabled: boolean = true,
+) {
   return useQuery({
     queryKey: ["objectContent", bucket, key],
     queryFn: () =>
       fetchJson<{ content: string; contentType?: string }>(
-        `/api/s3/objects/${bucket}/${encodeURIComponent(key)}?action=content`
+        `/api/s3/objects/${bucket}/${encodeURIComponent(key)}?action=content`,
       ),
     enabled: enabled && !!bucket && !!key,
   });
@@ -81,7 +89,13 @@ export function useDeleteObjects() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ bucket, keys }: { bucket: string; keys: string[] }) => {
+    mutationFn: async ({
+      bucket,
+      keys,
+    }: {
+      bucket: string;
+      keys: string[];
+    }) => {
       return fetchJson<{ success: boolean }>("/api/s3/objects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -113,7 +127,7 @@ export function useRenameObject() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "rename", newKey }),
-        }
+        },
       );
     },
     onSuccess: (_, { bucket }) => {
@@ -147,7 +161,7 @@ export function useMoveObject() {
             destinationBucket,
             destinationKey,
           }),
-        }
+        },
       );
     },
     onSuccess: (_, { bucket, destinationBucket }) => {
@@ -186,7 +200,7 @@ export function useCopyObject() {
             destinationBucket,
             destinationKey,
           }),
-        }
+        },
       );
     },
     onSuccess: (_, { destinationBucket }) => {
@@ -216,7 +230,7 @@ export function usePresignedUrl() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action, bucket, key, contentType }),
-        }
+        },
       );
     },
   });

@@ -1,5 +1,5 @@
-import { Sidebar } from "@/components/file-manager/sidebar";
 import { UserButton } from "@/components/auth/user-button";
+import { Sidebar } from "@/components/file-manager/sidebar";
 
 export default function DashboardLayout({
   children,

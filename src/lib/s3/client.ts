@@ -28,5 +28,8 @@ export function getAllowedBuckets(): string[] | null {
   if (!buckets || buckets.trim() === "") {
     return null; // null means all buckets are allowed
   }
-  return buckets.split(",").map((b) => b.trim()).filter(Boolean);
+  return buckets
+    .split(",")
+    .map((b) => b.trim())
+    .filter(Boolean);
 }

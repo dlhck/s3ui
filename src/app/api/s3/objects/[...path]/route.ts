@@ -1,17 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-server";
 import {
-  getObjectMetadata,
-  deleteObject,
-  renameObject,
   copyObject,
-  moveObject,
+  deleteObject,
   getObjectContent,
+  getObjectMetadata,
+  moveObject,
+  renameObject,
 } from "@/lib/s3/operations";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   try {
     await requireAuth();
@@ -20,7 +20,7 @@ export async function GET(
     if (!path || path.length < 2) {
       return NextResponse.json(
         { error: "Bucket and key are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -44,14 +44,14 @@ export async function GET(
     console.error("Error getting object:", error);
     return NextResponse.json(
       { error: "Failed to get object" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   try {
     await requireAuth();
@@ -60,7 +60,7 @@ export async function DELETE(
     if (!path || path.length < 2) {
       return NextResponse.json(
         { error: "Bucket and key are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -76,14 +76,14 @@ export async function DELETE(
     console.error("Error deleting object:", error);
     return NextResponse.json(
       { error: "Failed to delete object" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   try {
     await requireAuth();
@@ -92,7 +92,7 @@ export async function PATCH(
     if (!path || path.length < 2) {
       return NextResponse.json(
         { error: "Bucket and key are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -107,7 +107,7 @@ export async function PATCH(
         if (!newKey) {
           return NextResponse.json(
             { error: "New key is required" },
-            { status: 400 }
+            { status: 400 },
           );
         }
         await renameObject(bucket, key, newKey);
@@ -117,7 +117,7 @@ export async function PATCH(
         if (!destinationBucket || !destinationKey) {
           return NextResponse.json(
             { error: "Destination bucket and key are required" },
-            { status: 400 }
+            { status: 400 },
           );
         }
         await copyObject(bucket, key, destinationBucket, destinationKey);
@@ -127,17 +127,14 @@ export async function PATCH(
         if (!destinationBucket || !destinationKey) {
           return NextResponse.json(
             { error: "Destination bucket and key are required" },
-            { status: 400 }
+            { status: 400 },
           );
         }
         await moveObject(bucket, key, destinationBucket, destinationKey);
         return NextResponse.json({ success: true });
 
       default:
-        return NextResponse.json(
-          { error: "Invalid action" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
@@ -146,7 +143,7 @@ export async function PATCH(
     console.error("Error updating object:", error);
     return NextResponse.json(
       { error: "Failed to update object" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
